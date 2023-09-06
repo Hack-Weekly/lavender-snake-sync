@@ -1,4 +1,4 @@
-#Sudoku
+#Time Sync
 
 
 ## Guide for setting up Development Environment
