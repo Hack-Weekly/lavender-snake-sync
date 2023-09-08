@@ -64,7 +64,7 @@ class EventView(generics.ListAPIView):
     serializer_class = EventSerializer
 
 
-#@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated])
 class CrudEventView(APIView):
     serializer_class = EventSerializer
     def post(self,request,format=None):
@@ -76,10 +76,11 @@ class CrudEventView(APIView):
             is_public = serializer.data.get("is_public")
             event_start = serializer.data.get("event_start")
             event_end = serializer.data.get("event_end") 
-            user = User.objects.get(user_name=self.request.user.username)
+            name = serializer.data.get("name")
+            user = User.objects.get(username=self.request.user.username)
             event_note = serializer.data.get("event_note")
             anonymous = serializer.data.get("anonymous")
-            event = Event(creator=user,is_public=is_public,event_start=event_start,event_end=event_end,event_note=event_note,anonymous=anonymous)
+            event = Event(creator=user,name=name, is_public=is_public,event_start=event_start,event_end=event_end,event_note=event_note,anonymous=anonymous)
             event.save()
             return Response({"event_id":event.id},status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
@@ -92,14 +93,18 @@ class CrudEventView(APIView):
         if not pk:
             return Response({"message":"Welcome, create a new event",},status=status.HTTP_200_OK)
         event = Event.objects.get(pk=pk)
+       
         if event.creator == request.user:
-            event = Event.objects.get(pk=pk)
+            event = Event.objects.get(pk=pk) 
+            serializer = self.serializer_class(event)
+            return Response(serializer.data)
+        if not event.is_public:
+            return Response({"message":"You can not view this event because it is private"}, status=status.HTTP_200_OK)
         if event.anonymous and event.creator != request.user:
-            event = Event.objects.filter(pk=pk).defer("event_note","name")[0]
+            return Response({"id":event.id, "creator":event.creator.username, "event_start":event.event_start, "event_end":event.event_end}, status=status.HTTP_200_OK)
         if event.creator != request.user and not event.anonymous:
-            event = Event.objects.filter(pk=pk).defer("event_note")[0]
-        serializer = self.serializer_class(event)
-        return Response(serializer.data)
+           return Response({"id":event.id, "creator":event.creator.username, "name":event.name, "event_start":event.event_start, "event_end":event.event_end}, status=status.HTTP_200_OK)
+        return Response({"message":"Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
     
     def patch(self,request,pk,format=None):
         '''Update an existing event created by the user'''
@@ -107,7 +112,7 @@ class CrudEventView(APIView):
         serializer = self.serializer_class(data=request.data)
         if query_set.exists():
             event = query_set[0]
-            print(event.creator,self.request.user)
+          
             if event.creator != self.request.user:
                 return Response({"message":"You did not create this event"},status=status.HTTP_401_UNAUTHORIZED)
             if serializer.is_valid():
