@@ -5,7 +5,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework.exceptions import ValidationError
-from .models import Event
+from .models import Event,Availability
 
 #project imports
 
@@ -60,13 +60,23 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         return user
 
+# project serializers
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model= Event
-        fields = ("id","name","creator","is_public","event_start","event_end","event_note","anonymous")
+        fields = ("id","name","creator","is_public","event_start","event_end","event_note","members")
 
 class CreateEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = ("name","is_public","event_start","event_end")
-# project serializers
+
+class AvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Availability
+        fields = ("id","user","start","end")
+
+class CreateAvailabilitySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Availability
+        fields = ("start","end")

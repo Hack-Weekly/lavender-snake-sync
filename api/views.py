@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import JsonResponse,Http404
-from api.serializers import MyTokenObtainPairSerializer, RegisterSerializer, EventSerializer, CreateEventSerializer
+from api.serializers import MyTokenObtainPairSerializer, RegisterSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import generics
 from django.contrib.auth import get_user_model
@@ -11,10 +11,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from django.views.generic import TemplateView
-from .models import Event
+from api.models import Event,Availability
 
 User=get_user_model()
 # project imports
+
+from api.serializers import EventSerializer,AvailabilitySerializer,CreateEventSerializer,CreateAvailabilitySerializer
 
 class MyTokenObtainPairView(TokenObtainPairView):
     serializer_class = MyTokenObtainPairSerializer
@@ -67,61 +69,49 @@ class EventView(generics.ListAPIView):
 @permission_classes([IsAuthenticated])
 class CrudEventView(APIView):
     serializer_class = EventSerializer
+    permission_classes = [IsAuthenticated]
     def post(self,request,format=None):
         '''
         Create new event and check that inputs are valid
         '''
-        serializer = self.serializer_class(data=request.data)
+        serializer = CreateEventSerializer(data=request.data)
         if serializer.is_valid():
-            is_public = serializer.data.get("is_public")
-            event_start = serializer.data.get("event_start")
-            event_end = serializer.data.get("event_end") 
-            name = serializer.data.get("name")
-            user = User.objects.get(username=self.request.user.username)
-            event_note = serializer.data.get("event_note")
-            anonymous = serializer.data.get("anonymous")
-            event = Event(creator=user,name=name, is_public=is_public,event_start=event_start,event_end=event_end,event_note=event_note,anonymous=anonymous)
-            event.save()
-            return Response({"event_id":event.id},status=status.HTTP_201_CREATED)
-        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+            serializer.save(creator=request.user)
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
 
     def get(self,request,pk=None,format=None):
         '''Retrieve an event using unique id:pk
            If user did not create the event, then note cannot be viewed
            If the event is anonymous then name and notes cannot be viewed
         '''
-        if not pk:
-            return Response({"message":"Welcome, create a new event",},status=status.HTTP_200_OK)
-        event = Event.objects.get(pk=pk)
-       
-        if event.creator == request.user:
-            event = Event.objects.get(pk=pk) 
-            serializer = self.serializer_class(event)
-            return Response(serializer.data)
-        if not event.is_public:
-            return Response({"message":"You can not view this event because it is private"}, status=status.HTTP_200_OK)
-        if event.anonymous and event.creator != request.user:
-            return Response({"id":event.id, "creator":event.creator.username, "event_start":event.event_start, "event_end":event.event_end}, status=status.HTTP_200_OK)
-        if event.creator != request.user and not event.anonymous:
-           return Response({"id":event.id, "creator":event.creator.username, "name":event.name, "event_start":event.event_start, "event_end":event.event_end}, status=status.HTTP_200_OK)
-        return Response({"message":"Something went wrong"}, status=status.HTTP_400_BAD_REQUEST)
-    
+        event=Event.objects.get(pk=pk)
+        if event.creator != request.user and event.is_public == False:
+            return Response({"message":"You can not view this event"}, status=status.HTTP_200_OK)
+        serializer = self.serializer_class(event)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+
     def patch(self,request,pk,format=None):
         '''Update an existing event created by the user'''
-        query_set = Event.objects.filter(pk=pk)
-        serializer = self.serializer_class(data=request.data)
-        if query_set.exists():
-            event = query_set[0]
-          
-            if event.creator != self.request.user:
-                return Response({"message":"You did not create this event"},status=status.HTTP_401_UNAUTHORIZED)
-            if serializer.is_valid():
-                event.is_public = serializer.data.get("is_public")
-                event.event_start = serializer.data.get("event_start")
-                event.event_end = serializer.data.get("event_end")
-                event.event_note = serializer.data.get("event_note")
-                event.anonymous = serializer.data.get("anonymous")
-                event.save(update_fields=["is_public","event_start","event_end","event_note","anonymous"])
-                return Response({"message":"Successfully updated"},status=status.HTTP_202_ACCEPTED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        return Response({"message":"Event Error"},status=status.HTTP_400_BAD_REQUEST)
+        event = Event.objects.get(pk=pk)
+        if event.creator != request.user:
+            return Response({"message":"You can not edit this event"}, status=status.HTTP_200_OK)
+        serializer = self.serializer_class(event,data=request.data,partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data,status=status.HTTP_200_OK)
+        
+class AvailabilityView(APIView):
+    #shows all availabilities
+    serializer_class = AvailabilitySerializer
+    permission_classes = [IsAuthenticated]
+    def get(self,request,format=None):
+        availabilities = Availability.objects.all()
+        serializer = self.serializer_class(availabilities,many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+    
+    def post(self,request,format=None):
+        '''Create new availability and check that inputs are valid'''
+        serializer = CreateAvailabilitySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data,status=status.HTTP_201_CREATED)
