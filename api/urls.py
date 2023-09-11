@@ -18,6 +18,7 @@ urlpatterns = [
     path('test/', views.testEndPoint, name='test'),
     path('allevents/',views.EventView.as_view()),
     path('event/',views.CrudEventView.as_view(), name="new event"),
-    path('event/<int:pk>/',views.CrudEventView.as_view(), name="event")
+    path('event/<int:pk>/',views.CrudEventView.as_view(), name="event"),
+    path('availability/',views.AvailabilityView.as_view(), name="new availability"),
     #project urls
 ]

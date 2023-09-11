@@ -66,10 +66,11 @@ class EventView(generics.ListAPIView):
     serializer_class = EventSerializer
 
 
-@permission_classes([IsAuthenticated])
+
 class CrudEventView(APIView):
     serializer_class = EventSerializer
     permission_classes = [IsAuthenticated]
+    
     def post(self,request,format=None):
         '''
         Create new event and check that inputs are valid
@@ -78,12 +79,15 @@ class CrudEventView(APIView):
         if serializer.is_valid():
             serializer.save(creator=request.user)
             return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
     def get(self,request,pk=None,format=None):
         '''Retrieve an event using unique id:pk
            If user did not create the event, then note cannot be viewed
            If the event is anonymous then name and notes cannot be viewed
         '''
+        if pk is None:
+            return Response({"message":"Please enter an event id"}, status=status.HTTP_200_OK)
         event=Event.objects.get(pk=pk)
         if event.creator != request.user and event.is_public == False:
             return Response({"message":"You can not view this event"}, status=status.HTTP_200_OK)
@@ -99,7 +103,17 @@ class CrudEventView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data,status=status.HTTP_200_OK)
-        
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self,request,pk,format=None):
+        '''Delete an existing event created by the user'''
+        event = Event.objects.get(pk=pk)
+        if event.creator != request.user:
+            return Response({"message":"You can not delete this event"}, status=status.HTTP_200_OK)
+        event.delete()
+        return Response({"message":"Event deleted"},status=status.HTTP_200_OK)
+
+
 class AvailabilityView(APIView):
     #shows all availabilities
     serializer_class = AvailabilitySerializer
@@ -115,3 +129,4 @@ class AvailabilityView(APIView):
         if serializer.is_valid():
             serializer.save(user=request.user)
             return Response(serializer.data,status=status.HTTP_201_CREATED)
+        return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
