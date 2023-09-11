@@ -14,6 +14,8 @@ def is_available():
             password=os.environ.get("POSTGRES_PASSWORD"),
             dbname=os.environ.get("POSTGRES_DATABASE"),
         )
+        print("PostgreSQL is available!")
         return True
     except OperationalError:
+        print("PostgreSQL is not available!")
         return False
