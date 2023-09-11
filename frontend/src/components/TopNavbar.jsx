@@ -1,4 +1,5 @@
 import { Button, DarkThemeToggle, Navbar } from 'flowbite-react';
+import { Link } from 'react-router-dom';
 export const TopNavbar = () => {
   return (
     <Navbar className='py-1 shadow-sm' fluid>
@@ -16,8 +17,8 @@ export const TopNavbar = () => {
       </Navbar.Collapse>
       <div className="flex md:order-2 gap-2">
         <DarkThemeToggle />
-        <Button size="sm" color='purple' pill outline>Login</Button>
-        <Button size="sm" color='purple'  pill>Sign up</Button>
+        <Link to="/login"><Button size="sm" color='purple' pill outline>Login</Button></Link>
+        <Link to="/signup"><Button size="sm" color='purple'  pill>Sign up</Button></Link>
 
         <Navbar.Toggle />
       </div>
