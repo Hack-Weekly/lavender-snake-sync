@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 export const TopNavbar = () => {
   return (
     <Navbar className='py-1 shadow-sm' fluid>
-      <Navbar.Brand href="https://flowbite-react.com">
+      <Navbar.Brand>
         <span className="self-center whitespace-nowrap text-xl font-semibold dark:text-white">
           Lavander
         </span>
